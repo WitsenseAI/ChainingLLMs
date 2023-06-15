@@ -26,7 +26,7 @@ pip install streamlit langchain openai==0.27.0 tiktoken wikipedia chroma python-
 
 ## To run the app
 ```
-streamlit run yt_script_generator.py
+streamlit run llm_chain.py
 
 ```
 
