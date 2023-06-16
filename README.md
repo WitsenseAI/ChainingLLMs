@@ -14,6 +14,7 @@ Write me a youtube video tile about ------------
 ```
 
 LangChain prompt templates help to automate the prompt structuring behind the scene so that the user can simply enter only the topic in place of  -------------
+This feature of LangChain is quite useful to improve prompting, as the user need not know how to efficiently structure the prompt.
 
 
 ## Installation of requisites
