@@ -1,6 +1,6 @@
 ## Goal- Demo LLM workflow with Langchain -
 
-1. How to prompt templates can be used effectively to save the users the hassle to write elaborate prompts.
+1. How  prompt templates can be used effectively to save users the hassle to write elaborate prompts.
 
 2. How to do simple chaining operation with [LangChain](https://python.langchain.com/en/latest/index.html) where output from LLM can be used as input to query other service such as wikipedia
 
