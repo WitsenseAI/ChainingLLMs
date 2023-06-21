@@ -1,1 +1,7 @@
 .env
+data/*
+output/*
+*mp3
+*mp4
+*.jpg
+*.pyc

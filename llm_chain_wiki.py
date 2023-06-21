@@ -68,9 +68,9 @@ if prompt:
     generated_script = script_chain.run(title=generated_title, wikipedia_research=wiki_research)    
     st.write("Title:", generated_title)
     st.write("Script:", generated_script)
-    with st.expander("Title History"):
-        st.info(title_memory.buffer)
-    with st.expander("Script History"):
-        st.info(script_memory.buffer)
-    with st.expander("Wiki Research History"):
-        st.info(wiki_research)
+    # with st.expander("Title History"):
+    #     st.info(title_memory.buffer)
+    # with st.expander("Script History"):
+    #     st.info(script_memory.buffer)
+    # with st.expander("Wiki Research History"):
+    #     st.info(wiki_research)
