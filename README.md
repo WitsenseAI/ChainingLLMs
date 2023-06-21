@@ -24,8 +24,22 @@ git clone https://github.com/suvarnak/ChainingLLms.git
 conda create -n "llm_env" python=3.8
 conda activate llm_env
 pip install streamlit langchain openai==0.27.0 tiktoken wikipedia chroma python-dotenv
+pip install opencv-python
+pip install pyttsx3
+sudo apt-get install espeak
+pip install gTTS
 ```
 Create a `.env` file and paste your API key in it.
+
+
+## To run the app 
+The script `llm_chian.py` forms a simple sequential chain that generates a title for the topic entered by user, and from generated title and user-entered topic, generates the video script.
+```
+streamlit run llm_chain.py
+
+```
+
+The script `llm_chain_wiki.py` uses a wrapper for Wikipedia python library 
 
 ## To run the app
 ```
