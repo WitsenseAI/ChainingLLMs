@@ -16,8 +16,8 @@ from moviepy.editor import *
 from langchain.utilities import WikipediaAPIWrapper
 import cv2
 import streamlit as st
-
-
+import json
+from structured_video_script import structured_video_script
 def initializeAPI():
     load_dotenv()
     openai_api_key = os.getenv("OPENAI_API_KEY")
@@ -95,8 +95,12 @@ def create_script(topic="Hello World", video_script_file="data/sample_video_scri
         file.write(generated_script)
     base_name, _ = os.path.splitext(video_script_file)
     video_json_file = base_name + ".json"
+    video_script = {
+        "title": generated_title,
+        "script": structured_script
+    }
     with open(video_json_file, "w") as file:
-        file.write(structured_script)
+        json.dump(structured_script,file)
 
 
 def get_script(video_script_file="data/sample_video_script.txt"):
@@ -135,16 +139,15 @@ def script_to_clips(voiceover_lines,topic):
     clips = []
     audio_clips = []
     for aSentence in voiceover_lines:
-        script =  aSentence + " ...." # .... are for pauses
+        script =  aSentence  # .... are for pauses
         language = "en-gb"
         myobj = gTTS(text=script, lang=language, slow=False)
         audio_clip_path = "voiceover_clip" + str(clip_no) + ".mp3"
         myobj.save(audio_clip_path)
-        print(script)
         try:
             audio_clip = AudioFileClip(str(audio_clip_path))
-            print(audio_clip.duration)        
-            clip = ImageSequenceClip([image_list[clip_no]], fps=24.0, durations=[audio_clip.duration])
+            image_count = round(audio_clip.duration * 24.0)        
+            clip = ImageSequenceClip([image_list[clip_no]] * image_count , fps=24.0, durations=[audio_clip.duration])
             # clip.duration = audio_clip.duration
             clip_no = clip_no + 1
             clips.append(clip)
@@ -159,7 +162,6 @@ def script_to_clips(voiceover_lines,topic):
     video.set_duration(video_duration)
     # Write the video clip to a file
     video.fps = 24.0
-    print(video.duration, video.fps)
     output_file_path = os.path.join("output",f"{topic}.mp4")
     video.write_videofile(output_file_path)
     return output_file_path
@@ -173,30 +175,24 @@ def generate_images(prompts):
         no_of_imgs += 1
         img_from_prompt(prompt, img_name)
 
+st.title("Video Script Generator")
 
-def main():
-    
-    st.title("Video Script Generator")
-    #prompt = st.text_input("Enter the prompt")
-    prompt = "nasa"
-    if prompt:
-        topic = prompt
-        script_file_path = f"data/{topic}.txt"
-        initializeAPI()
-        create_script(topic, script_file_path)
-        title= find_title(script_file_path)
-        #print("Title: ",title)
-        prompts = find_prompts(script_file_path)
-        prompts.insert(0,"Generate a photorealistic image for " + title + " Sigma 26 mm f/1.4") 
-        # print("~~~~~~~~~~~~",prompts)
-        #generate_images(prompts=prompts)
-        voiceover_lines = find_voiceover_lines(script_file_path)
-        voiceover_lines.insert(0, title)
-        print("Voiceover lines:~~~~~~~~~",voiceover_lines)
-        video_path = script_to_clips(voiceover_lines, topic)
-        st.video(video_path, format="video/mp4", start_time=0)
+form = st.form(key='my_form')
+text_input = form.text_input(label='Enter the prompt text')
+submit_button = form.form_submit_button(label='Submit')
+if submit_button:
+    topic = text_input
+    script_file_path = f"data/{topic}.txt"
+    initializeAPI()
+    #create_script(topic, script_file_path)
+    base_name, _ = os.path.splitext(script_file_path)
+    script_file_path_json = base_name + ".json"
+    svs = structured_video_script(script_file_path_json)
+    title, prompts, voiceover_lines = svs.get_title(), svs.get_scene(), svs.get_voiceover()
+    prompts.insert(0, title)
+    voiceover_lines.insert(0, "WitsenseAI presents short video on " + title)
+    # #generate_images(prompts=prompts)
+    video_path = script_to_clips(voiceover_lines, topic)
+    #st.video(video_path, format="video/mp4", start_time=0)
+    st.session_state["disabled"] = True
 
-
-
-if __name__ == "__main__":
-    main()
