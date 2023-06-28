@@ -8,13 +8,15 @@ from gtts import gTTS
 from langchain.llms import OpenAI
 from langchain.chat_models import ChatOpenAI
 
-from langchain.prompts import PromptTemplate
+from langchain.prompts import PromptTemplate, ChatPromptTemplate
 from langchain.chains import LLMChain
 from langchain.memory import ConversationBufferMemory
 from dotenv import load_dotenv
 from moviepy.editor import *
 from langchain.utilities import WikipediaAPIWrapper
 import cv2
+import streamlit as st
+
 
 def initializeAPI():
     load_dotenv()
@@ -29,10 +31,24 @@ def create_script(topic="Hello World", video_script_file="data/sample_video_scri
     )
     script_template = PromptTemplate(
         # script to be generated from title 'and' wikipedia research
-        input_variables=["title"], #, 'wikipedia_research'],
-        template="Write a video script for explanatory video that has a title {title}, describing each scene with details such as what is being shown, how it relates to the title {title}."
+        input_variables=["title"], #,'wikipedia_research'],
+        template="Write a scene-by-scene video script using title {title}"
         #and by referring wikipedia for research {wikipedia_research}"
     )
+    structured_script_template_txt = """\
+    For scene-by-scene video script: {script}, extract the following information:
+
+    scene: Keep only the scene description and remove the additional details such as narators, dialogues.
+    scene_transition: Extract how the scene changes: We cut to the scene .. , fade in, fade out, etc. 
+    voiceover: Extract any sentences that voiceover or narrator or any character says.
+
+    Format the output as JSON with the following keys:
+    scene:
+    scene_transition:
+    voiceover:
+
+    """
+    structured_script_template = ChatPromptTemplate.from_template(structured_script_template_txt)
 
     # memory setting to store the conversation
     title_memory = ConversationBufferMemory(
@@ -42,7 +58,7 @@ def create_script(topic="Hello World", video_script_file="data/sample_video_scri
 
     # LLM call
     llm = OpenAI(temperature=0.2, max_tokens=3300)
-    chatGPTLLM = ChatOpenAI(model_name="gpt-3.5-turbo")
+    chatGPTLLM = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.2)
 
     # define chains
     title_chain = LLMChain(
@@ -57,17 +73,30 @@ def create_script(topic="Hello World", video_script_file="data/sample_video_scri
         prompt=script_template,
         output_key="script",
         memory=script_memory,
-        verbose=True
+        # verbose=True
     )
+    structured_script_chain = LLMChain(
+        llm=llm,
+        prompt=structured_script_template, #script_template,
+        output_key="structured_script",
+        # verbose=True
+    )
+
     generated_title = title_chain.run(topic)
     print("title", generated_title)
     wiki = WikipediaAPIWrapper()
     wiki_research = wiki.run(topic)
     generated_script = script_chain.run(
         title=generated_title) #, wikipedia_research=wiki_research)
+    structured_script = structured_script_chain.run(
+        script=generated_script)
     with open(video_script_file, "w") as file:
         file.write(generated_title)
         file.write(generated_script)
+    base_name, _ = os.path.splitext(video_script_file)
+    video_json_file = base_name + ".json"
+    with open(video_json_file, "w") as file:
+        file.write(structured_script)
 
 
 def get_script(video_script_file="data/sample_video_script.txt"):
@@ -97,7 +126,7 @@ def encodeImage(data):
 
 
 
-def script_to_audio_clips(voiceover_lines):
+def script_to_clips(voiceover_lines,topic):
     script = ""
     clip_no= 0
     img_clips = []
@@ -111,16 +140,15 @@ def script_to_audio_clips(voiceover_lines):
         myobj = gTTS(text=script, lang=language, slow=False)
         audio_clip_path = "voiceover_clip" + str(clip_no) + ".mp3"
         myobj.save(audio_clip_path)
+        print(script)
         try:
             audio_clip = AudioFileClip(str(audio_clip_path))
             print(audio_clip.duration)        
-            clip = ImageSequenceClip([image_list[clip_no]], fps=1/audio_clip.duration)
+            clip = ImageSequenceClip([image_list[clip_no]], fps=24.0, durations=[audio_clip.duration])
+            # clip.duration = audio_clip.duration
             clip_no = clip_no + 1
             clips.append(clip)
             audio_clips.append(audio_clip)
-        # if i < num_images - 1:
-        #     pause_clip = AudioClip(duration=pause_duration)
-        #     clips.append(pause_clip)
         except Exception as exception:
             print("failed to import audio clip!\n" + exception)
     video = concatenate_videoclips(clips)
@@ -128,14 +156,18 @@ def script_to_audio_clips(voiceover_lines):
     audio = concatenate_audioclips(audio_clips)
     video = video.set_audio(audio)
     video_duration = audio.duration
-    video = video.set_duration(video_duration)
+    video.set_duration(video_duration)
     # Write the video clip to a file
-    video.write_videofile("output/video.mp4")
+    video.fps = 24.0
+    print(video.duration, video.fps)
+    output_file_path = os.path.join("output",f"{topic}.mp4")
+    video.write_videofile(output_file_path)
+    return output_file_path
 
 
     
 def generate_images(prompts):
-    no_of_imgs = 1  # st.number_input("Enter the number of images")
+    no_of_imgs = 1  # st.number_input("Enter the number of images per prompt")
     for prompt in prompts:
         img_name = "image__generated"+str(no_of_imgs)+".jpg"
         no_of_imgs += 1
@@ -143,23 +175,27 @@ def generate_images(prompts):
 
 
 def main():
-    topic = "Artemis"
-    script_file_path = "data/artemis.txt"
-    initializeAPI()
-    # #create_script(topic, script_file_path)
-    title= find_title(script_file_path)
-    # print("Title: ",title)
-    # prompts = find_prompts(script_file_path)
-    # prompts.insert(0,"Generate a photorealistic image for " + title + " Sigma 26 mm f/1.4") 
+    
+    st.title("Video Script Generator")
+    #prompt = st.text_input("Enter the prompt")
+    prompt = "nasa"
+    if prompt:
+        topic = prompt
+        script_file_path = f"data/{topic}.txt"
+        initializeAPI()
+        create_script(topic, script_file_path)
+        title= find_title(script_file_path)
+        #print("Title: ",title)
+        prompts = find_prompts(script_file_path)
+        prompts.insert(0,"Generate a photorealistic image for " + title + " Sigma 26 mm f/1.4") 
+        # print("~~~~~~~~~~~~",prompts)
+        #generate_images(prompts=prompts)
+        voiceover_lines = find_voiceover_lines(script_file_path)
+        voiceover_lines.insert(0, title)
+        print("Voiceover lines:~~~~~~~~~",voiceover_lines)
+        video_path = script_to_clips(voiceover_lines, topic)
+        st.video(video_path, format="video/mp4", start_time=0)
 
-    # print("~~~~~~~~~~~~",prompts)
-    # generate_images(prompts=prompts)
-    voiceover_lines = find_voiceover_lines(script_file_path)
-    voiceover_lines.insert(0, title)
-    # print(len(voiceover_lines),len(prompts))
-    print("Voiceover lines:~~~~~~~~~",voiceover_lines)
-    #script_to_voice(voiceover_lines)
-    script_to_audio_clips(voiceover_lines)
 
 
 if __name__ == "__main__":
