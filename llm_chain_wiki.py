@@ -24,7 +24,7 @@ title_template = PromptTemplate(
 
 script_template = PromptTemplate(
     input_variables=["title", 'wikipedia_research'], #script to be generated from title 'and' wikipedia research   
-    template="Write a video script for a video that has a title {title} and by referring wikipedia for research {wikipedia_research}"
+    template="Write a video script for a video that has a title {title} using wikipedia pages {wikipedia_research}"
 )
 
 # memory setting to store the conversation
