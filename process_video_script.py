@@ -23,7 +23,7 @@ def find_voiceover_lines(filepath):
             if match2:
                 voiceover_line = match2.group(1).strip()
             if match1 or match2:
-                voiceover_line = re.sub(r"[^a-zA-Z0-9]+", ' ', voiceover_line)
+                voiceover_line = re.sub(r"[^a-zA-Z0-9.,?'!]+", ' ', voiceover_line)
                 voiceover_lines.append(voiceover_line)
             
 
@@ -35,6 +35,7 @@ def find_prompts(filepath):
     with open(filepath, "r") as file:
         for line in file:
             #line = "Cut to a shot of stan looking up at the sky in awe"
+            line = line.replace(", with a voiceover saying:", "")
             match1 = re.search(r"Cut to a shot of (.*)", line) or re.search(r"A shot of (.*)", line)
             match2 = re.search(r"Fade in to a (.*)", line)
             match3 = re.search(r"a shot of(.*)", line)
@@ -42,18 +43,18 @@ def find_prompts(filepath):
             if match1:
                 extracted_text = match1.group(1)
                 extracted_text = re.sub(r"[:,\[\]]", "", extracted_text)
-                prompts.append(extracted_text+ ", Sigma 85 mm f/1.4")
+                prompts.append(extracted_text+ ", Sigma 24 mm f/8 1/1000 sec shutter speed")
             elif match2:
                 extracted_text = match2.group(1)
                 extracted_text = re.sub(r"[:,\[\]]", "", extracted_text)
-                prompts.append(extracted_text+ ", Sigma 85 mm f/1.4")
+                prompts.append(extracted_text+ ", Sigma 24 mm f/8 1/1000 sec shutter speed")
             elif match3:
                 extracted_text = match3.group(1)
-                print("@@@@@@@@@", extracted_text)
-                prompts.append(extracted_text+ ", Sigma 85 mm f/1.4")
+                # print("@@@@@@@@@", extracted_text)
+                prompts.append(extracted_text+ ", Sigma 24 mm f/8 1/1000 sec shutter speed")
             elif match4:
                 extracted_text = match4.group(1)
-                prompts.append("The person is shown" + extracted_text + ", Sigma 85 mm f/1.4")
+                prompts.append("A portrait  of a person, looking up at the sky in awe" + extracted_text + "Sigma 85 mm f/1.4")
 
     return prompts
 
