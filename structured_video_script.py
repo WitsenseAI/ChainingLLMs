@@ -14,7 +14,12 @@ import json
 import json
 
 class structured_video_script:
-    def __init__(self, file_path):
+    # generation_style = {"placement" = "after", "prompt_text" = "Sigma 85 mm f/1.4, "}
+    style = {"place" : "before", "prompt_text" : "A water color painting  of"}
+     
+    def __init__(self, file_path, generation_style):
+        if generation_style is not None:
+            self.style = generation_style
         with open(file_path, "r") as file:
             self.data = json.load(file)
 
@@ -22,8 +27,14 @@ class structured_video_script:
         return self.data["title"]
 
     def get_scene(self):
-        return self.data["scene"]
-
+        modified_prompts = []
+        for prompt_txt in self.data["scene"]:
+            if self.style["place"] == "before":
+                prompt_txt =  self.style["prompt_text"] + prompt_txt 
+            elif self.style["place"] == "after":
+                prompt_txt = prompt_txt + self.style["prompt_text"]
+            modified_prompts.append(prompt_txt)
+        return modified_prompts
     def get_scene_transition(self):
         return self.data["scene_transition"]
     
